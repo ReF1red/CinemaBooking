@@ -28,3 +28,34 @@ class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+
+
+class CityBase(BaseModel):
+    name: str
+
+class CityCreate(CityBase):
+    pass
+
+class CityOut(CityBase):
+    id: int
+    name: str
+    class Config:
+        from_attributes = True
+
+
+
+class CinemaBase(BaseModel):
+    city_id: int
+    name: str
+    address: Optional[str] = None
+
+class CinemaCreate(CinemaBase):
+    pass
+
+class CinemaOut(CinemaBase):
+    id: int
+    city_id: int
+    name: str
+    address: Optional[str] = None
+    class Config:
+        from_attributes = True
