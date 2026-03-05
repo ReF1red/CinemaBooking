@@ -1,60 +1,73 @@
+import json
+import os
 from app.database import SessionLocal
 from app.models import models
+
+# Пресет данных загружается из data\cities.json и data/cinemas.json
+
+def load_json(filename):
+    filepath = os.path.join('data', filename)
+    with open(filepath, 'r', encoding='utf-8') as file:
+        return json.load(file)
 
 def init_cities_and_cinemas():
     db = SessionLocal()
     
     try:
-        if db.query(models.City).count() > 0:
-            print("Города уже есть в базе.")
-            return
+        cities_exist = db.query(models.City).count() > 0
+        cinemas_exist = db.query(models.Cinema).count() > 0
         
-        cities_data = [
-            {"name": "Москва"},
-            {"name": "Санкт-Петербург"},
-            {"name": "Владивосток"},
-            {"name": "Волгоград"},
-            {"name": "Новосибирск"}
-        ]
+        if cities_exist or cinemas_exist:
+            print("\nВ базе уже есть данные о городах и/или кинотеатрах.")
+            response = input("Хотите очистить старые данные и загрузить новые? (да/нет): ").strip().lower()
+            
+            if response in ['да', 'yes', 'y', 'д']:
+                db.query(models.Cinema).delete()
+                db.query(models.City).delete()
+
+                db.commit()
+                print("Старые данные удалены.")
+            else:
+                print("Операция отменена. Существующие данные сохранены.")
+                db.close()
+                return
         
-        cities = []
+        cities_data = load_json('cities.json')
+        
         for city_data in cities_data:
             city = models.City(**city_data)
             db.add(city)
-            cities.append(city)
-        
+    
         db.commit()
         print(f"Добавлено {len(cities_data)} городов")
-        
-        moscow = db.query(models.City).filter(models.City.name == "Москва").first()
-        saint_petersburg = db.query(models.City).filter(models.City.name == "Санкт-Петербург").first()
-        vladivostok = db.query(models.City).filter(models.City.name == "Владивосток").first()
-        volgograd = db.query(models.City).filter(models.City.name == "Волгоград").first()
-        novosibirsk = db.query(models.City).filter(models.City.name == "Новосибирск").first()
-        
 
-        
-        cinemas_data = [
-            {"city_id": moscow.id, "name": "Октябрь", "address": "ул. Новый Арбат, 24"},
-            {"city_id": moscow.id, "name": "Каро 11 Охотный Ряд", "address": "Охотный Ряд, 2"},
-            {"city_id": moscow.id, "name": "Формула Кино Европа", "address": "пл. Киевского Вокзала, 2"},
-            {"city_id": saint_petersburg.id, "name": "Аврора", "address": "Невский пр., 60"},
-            {"city_id": saint_petersburg.id, "name": "Великан Парк", "address": "пр. Тореза, 9"},
-            {"city_id": vladivostok.id, "name": "Океан IMAX", "address": "ул. Набережная, 9"},
-            {"city_id": vladivostok.id, "name": "Уссури", "address": "ул. Светланская, 49"},
-            {"city_id": volgograd.id, "name": "Пять Звёзд", "address": "пр. Ленина, 86"},
-            {"city_id": volgograd.id, "name": "Киномакс", "address": "ул. Землячки, 110"},
-            {"city_id": novosibirsk.id, "name": "Победа", "address": "ул. Ленина, 7"},
-            {"city_id": novosibirsk.id, "name": "Синема Парк", "address": "ул. Ватутина, 107"},
-        ]
-        
+        cinemas_data = load_json('cinemas.json')
+
+        cities = {city.name: city for city in db.query(models.City).all()}
+
         for cinema_data in cinemas_data:
-            cinema = models.Cinema(**cinema_data)
-            db.add(cinema)
-        
+            city_name = cinema_data.pop('city')
+            city = cities.get(city_name)
+
+            if city:
+                cinema = models.Cinema(
+                    city_id=city.id,
+                    name=cinema_data['name'],
+                    address=cinema_data.get('address')
+                )
+                db.add(cinema)
+            else:
+                print(f"Предупреждение: город {city_name} не найден")
+    
         db.commit()
         print(f"Добавлено {len(cinemas_data)} кинотеатров")
-        
+
+    except FileNotFoundError as error:
+        print(f"Ошибка: файл не найден - {error}")
+
+    except json.JSONDecodeError as error:
+        print(f"Ошибка: неверный формат JSON - {error}")
+
     except Exception as error:
         print(f"Ошибка: {error}")
         db.rollback()
@@ -62,6 +75,7 @@ def init_cities_and_cinemas():
         db.close()
 
 if __name__ == "__main__":
-    print("Начало инициализации данных")
+    
+    print("\nНачало инициализации данных")
     init_cities_and_cinemas()
     print("Инициализация завершена")
