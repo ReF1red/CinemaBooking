@@ -24,7 +24,7 @@ def get_cinemas_by_city(
 @router.post("/admin/cities", response_model=schemas.CityOut)
 def create_city(
     city_data: schemas.CityCreate,
-    db = Depends(get_db),
+    db: Session = Depends(get_db),
     current_user = Depends(get_current_admin)
     ):
     return CityService.create_city(db, city_data)

@@ -8,11 +8,11 @@ from app.api.deps import get_current_admin
 
 router = APIRouter(prefix="/movies", tags=["Movies"])
 
-@router.get("/", response_model = List[schemas.MovieOut])
+@router.get("/", response_model=List[schemas.MovieOut])
 def get_movies(db: Session = Depends(get_db)):
     return MovieService.get_all_movies(db)
 
-@router.get("/{movie_id}", response_model = schemas.MovieOut)
+@router.get("/{movie_id}", response_model=schemas.MovieOut)
 def get_movie_by_id(movie_id: int, db: Session = Depends(get_db)):
     return MovieService.get_movie_by_id(db, movie_id)
 
@@ -24,7 +24,7 @@ def create_movie(
 ):
     return MovieService.create_movie(db, movie_data)
 
-@router.put("/admin/movies/{movie_id}", response_model = schemas.MovieOut)
+@router.put("/admin/movies/{movie_id}", response_model=schemas.MovieOut)
 def update_movie(
     movie_id: int,
     movie_data: schemas.MovieCreate,

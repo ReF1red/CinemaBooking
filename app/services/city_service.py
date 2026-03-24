@@ -20,14 +20,14 @@ class CityService:
 
     @staticmethod
     def create_city(db: Session, city_data: schemas.CityCreate):
-        exist_city = db.query(models.City).filter(models.City.city_name == city_data.name).first()
+        exist_city = db.query(models.City).filter(models.City.city_name == city_data.city_name).first()
         if exist_city:
             raise HTTPException(
                 status_code=400,
                 detail="City already exists"
             )
         
-        new_city = models.City(city_name=city_data.name)
+        new_city = models.City(city_name=city_data.city_name)
         db.add(new_city)
         db.commit()
         db.refresh(new_city)
