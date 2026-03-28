@@ -22,13 +22,21 @@ class SessionService:
 
         result = []
         for session in sessions:
+
+            hall = db.query(models.Hall).filter(models.Hall.hall_id == session.hall_id).first()
+            movie = db.query(models.Movie).filter(models.Movie.movie_id == session.movie_id).first()
+
+
             result.append({
                 "session_id": session.session_id,
                 "hall_id": session.hall_id,
                 "movie_id": session.movie_id,
                 "start_time": session.start_time,
                 "price": session.price,
-                "available_seats": session.available_seats
+                "available_seats": session.available_seats,
+                "hall_name": hall.hall_name if hall else None,
+                "movie_title": movie.title if movie else None,
+                "total_seats": hall.rows_count * hall.seats_per_row if hall else None
             })
 
         return result

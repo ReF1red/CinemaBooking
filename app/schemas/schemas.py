@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -117,5 +117,24 @@ class SessionOut(SessionBase):
     hall_name: Optional[str] = None
     movie_title: Optional[str] = None
     total_seats: Optional[int] = None
+    class Config:
+        from_attributes = True
+
+class SeatInfo(BaseModel):
+    seat_id: int
+    row_letter: str
+    seat_number: int
+    
+class BookingCreate(BaseModel):
+    session_id: int
+    seats: List[int]
+
+class BookingOut(BaseModel):
+    session_id: int
+    booking_id: int
+    booking_time: datetime
+    status: str
+    total_price: float
+    seats: List[SeatInfo]
     class Config:
         from_attributes = True
