@@ -3,73 +3,27 @@ from sqlalchemy.orm import Session
 from typing import List
 from app.schemas import schemas
 from app.database import get_db
-from app.services.city_service import CityService
+from app.services.cinema_service import CinemaService
 from app.services.log_service import LogService
 from app.api.deps import get_current_user, get_current_admin
 
-router = APIRouter(prefix="/cities", tags=["Cities"])
+router = APIRouter(prefix="/cities", tags=["Cinemas"])
 
-@router.get("/", response_model=List[schemas.CityOut])
-def get_cities(
+@router.get("/{city_id}/cinemas", response_model=List[schemas.CinemaOut])
+def get_cinemas_by_city(
+    city_id: int,
     db = Depends(get_db)
     ):
-    return CityService.get_all_cities(db)
+    return CinemaService.get_cinemas_by_city(db, city_id)
 
-@router.post("/admin/cities", response_model=schemas.CityOut)
-def create_city(
-    city_data: schemas.CityCreate,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
-    ):
-    city = CityService.create_city(db, city_data)
-
-    user_id = current_user.user_id if current_user else None
-    user_email = current_user.email if current_user else None
-
-    LogService.log_action(
-        db = db,
-        user_id = user_id,
-        user_email = user_email,
-        action_type = "CREATE_CITY",
-        details = {"city": city_data},
-        ip_address = request.client.host
-    )
-
-    return city
-
-@router.put("/admin/cities/{city_id}", response_model=schemas.CityOut)
-def update_city(
-    city_id: int,
-    city_data: schemas.CityCreate,
-    request: Request,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
-):
-    city = CityService.update_city(db, city_id, city_data)
-
-    user_id = current_user.user_id if current_user else None
-    user_email = current_user.email if current_user else None
-
-    LogService.log_action(
-        db = db,
-        user_id = user_id,
-        user_email = user_email,
-        action_type = "UPDATE_CITY",
-        details = {"city_data": city_data},
-        ip_address = request.client.host
-    )
-
-    return city
-
-@router.delete("/admin/cities/{city_id}")
-def delete_city(
-    city_id: int,
+@router.post("/admin/cinemas", response_model=schemas.CinemaOut)
+def create_cinema(
+    cinema_data: schemas.CinemaCreate,
     request: Request,
     db = Depends(get_db),
     current_user = Depends(get_current_admin)
     ):
-    city = CityService.get_city_by_id(db, city_id)
+    cinema = CinemaService.create_cinema(db, cinema_data)
 
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
@@ -78,9 +32,56 @@ def delete_city(
         db = db,
         user_id = user_id,
         user_email = user_email,
-        action_type = "DELETE_CITY",
-        details = {"city": city},
+        action_type = "CREATE_CINEMA",
+        details = {"cinema_data": cinema_data},
         ip_address = request.client.host
     )
 
-    return CityService.delete_city(db, city_id)
+    return cinema
+
+@router.put("/admin/cinemas/{cinema_id}", response_model=schemas.CinemaOut)
+def update_cinema(
+    cinema_id: int,
+    cinema_data: schemas.CinemaCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_admin)
+):
+    cinema = CinemaService.update_cinema(db, cinema_id, cinema_data)
+
+    user_id = current_user.user_id if current_user else None
+    user_email = current_user.email if current_user else None
+
+    LogService.log_action(
+        db = db,
+        user_id = user_id,
+        user_email = user_email,
+        action_type = "UPDATE_CINEMA",
+        details = {"cinema_data": cinema_data},
+        ip_address = request.client.host
+    )
+
+    return cinema
+
+@router.delete("/admin/cinemas/{cinema_id}")
+def delete_cinema(
+    cinema_id: int,
+    request: Request,
+    db = Depends(get_db),
+    current_user = Depends(get_current_admin)
+    ):
+    cinema = CinemaService.get_cinema_by_id(db, cinema_id)
+
+    user_id = current_user.user_id if current_user else None
+    user_email = current_user.email if current_user else None
+
+    LogService.log_action(
+        db = db,
+        user_id = user_id,
+        user_email = user_email,
+        action_type = "DELETE_CINEMA",
+        details = {"cinema": cinema},
+        ip_address = request.client.host
+    )
+
+    return CinemaService.delete_cinema(db, cinema_id)

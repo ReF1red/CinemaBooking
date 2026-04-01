@@ -6,6 +6,20 @@ from datetime import datetime
 
 class BookingService:
     @staticmethod
+    def get_booking_by_id(db: Session, booking_id: int, user_id: int):
+        booking = db.query(models.Booking).filter(
+            models.Booking.booking_id == booking_id,
+            models.Booking.user_id == user_id
+        ).first()
+        
+        if not booking:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Booking not found"
+            )
+        return booking
+
+    @staticmethod
     def create_booking(db: Session, user_id: int, booking_data: schemas.BookingCreate):
         session = db.query(models.Session).filter(models.Session.session_id == booking_data.session_id).first()
         
