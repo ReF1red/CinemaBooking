@@ -59,8 +59,8 @@ class MovieService:
         sessions = db.query(models.Session).filter(models.Session.movie_id == movie_id).first()
         if sessions:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot delete movie with existing sessions"
+                status_code = status.HTTP_400_BAD_REQUEST,
+                detail = "Cannot delete movie with existing sessions"
             )
         
         db.delete(movie)

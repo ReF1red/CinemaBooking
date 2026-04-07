@@ -2,7 +2,10 @@ from sqlalchemy.orm import Session
 from app.models import models
 from app.schemas import schemas
 from fastapi import HTTPException, status 
-from datetime import datetime
+from datetime import datetime, timedelta
+from app.ai_models.fraud_model import fraud_model
+
+import numpy as np
 
 class BookingService:
     @staticmethod
@@ -59,6 +62,53 @@ class BookingService:
             )
         
         total_price = session.price * len(booking_data.seats)
+
+        if len(booking_data.seats) > 1:
+            seat_positions = [(seat.row_letter, seat.seat_number) for seat in seats]
+            row_numbers = [ord(row[0]) - ord('A') for row, _ in seat_positions]
+            seat_numbers = [num for _, num in seat_positions]
+            
+            row_variance = np.var(row_numbers) if len(row_numbers) > 1 else 0
+            seat_variance = np.var(seat_numbers) if len(seat_numbers) > 1 else 0
+            seats_scattered = min(1.0, (row_variance + seat_variance) / 50)
+        else:
+            seats_scattered = 0.0
+
+        last_hour = datetime.now() - timedelta(hours=1)
+
+        recent_bookings = db.query(models.Booking).filter(
+            models.Booking.user_id == user_id,
+            models.Booking.booking_time >= last_hour
+        ).count()
+
+        total_user_bookings = db.query(models.Booking).filter(
+            models.Booking.user_id == user_id
+        ).count()
+
+        cancelled = db.query(models.Booking).filter(
+            models.Booking.user_id == user_id,
+            models.Booking.status == "cancelled"
+        ).count()
+        
+        cancellation_rate = cancelled / total_user_bookings if total_user_bookings > 0 else 0
+
+        features = {
+            'ticket_count': len(booking_data.seats),
+            'total_amount': total_price,
+            'hour': datetime.now().hour,
+            'day_of_week': datetime.now().weekday(),
+            'recent_bookings': recent_bookings,
+            'cancellation_rate': cancellation_rate,
+            'seats_scattered': seats_scattered
+        }
+
+        prediction = fraud_model.predict(features)
+
+        if prediction['is_fraudulent']:
+            raise HTTPException(
+                status_code = status.HTTP_403_FORBIDDEN,
+                detail = f"Подозрительная операция. Риск: {prediction['risk_score']:.2f}"
+            )
 
         new_booking = models.Booking(
             user_id = user_id,

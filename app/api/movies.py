@@ -26,14 +26,15 @@ def get_movie_by_id(
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
 
-    LogService.log_action(
-        db = db,
-        user_id = user_id,
-        user_email = user_email,
-        action_type = "VIEW_MOVIE",
-        details = {"movie_id": movie_id, "title": movie.title},
-        ip_address = request.client.host
-    )    
+    if current_user:
+        LogService.log_action(
+            db = db,
+            user_id = user_id,
+            user_email = user_email,
+            action_type = "VIEW_MOVIE",
+            details = {"movie_id": movie_id, "title": movie.title},
+            ip_address = request.client.host
+        )    
 
     return movie
 
@@ -54,7 +55,7 @@ def create_movie(
         user_id = user_id,
         user_email = user_email,
         action_type = "CREATE_MOVIE",
-        details = {"movie_data": movie_data},
+        details = {"movie_data": movie_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -78,7 +79,7 @@ def update_movie(
         user_id = user_id,
         user_email = user_email,
         action_type = "UPDATE_MOVIE",
-        details = {"movie_data": movie_data},
+        details = {"movie_data": movie_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -101,7 +102,10 @@ def delete_movie(
         user_id = user_id,
         user_email = user_email,
         action_type = "DELETE_MOVIE",
-        details = {"movie": movie},
+        details = {"movie": {
+            "movie_id": movie.movie_id,
+            "title": movie.title
+        }},
         ip_address = request.client.host
     )
 

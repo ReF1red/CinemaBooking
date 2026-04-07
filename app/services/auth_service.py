@@ -1,7 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
 from app.models import models
-from app.schemas import schemas
 from app.core.security import get_password_hash, verify_password, create_access_token
 
 class AuthService:

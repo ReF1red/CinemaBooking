@@ -6,7 +6,6 @@ from app.database import get_db
 from app.services.booking_service import BookingService
 from app.services.log_service import LogService
 from app.api.deps import get_current_active_user
-from app.models import models
 
 router = APIRouter(prefix="/booking", tags=["Booking"])
 
@@ -27,7 +26,12 @@ def create_booking(
         user_id = user_id,
         user_email = user_email,
         action_type = "CREATE_BOOKING",
-        details = {"booking": booking},
+        details = {
+            "booking_id": booking["booking_id"],
+            "session_id": booking["session_id"],
+            "total_price": booking["total_price"],
+            "seats_count": len(booking["seats"])
+        },
         ip_address = request.client.host
     )
 

@@ -26,13 +26,13 @@ def create_city(
 
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
-
+    
     LogService.log_action(
         db = db,
         user_id = user_id,
         user_email = user_email,
         action_type = "CREATE_CITY",
-        details = {"city": city_data},
+        details = {"city": city_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -56,7 +56,7 @@ def update_city(
         user_id = user_id,
         user_email = user_email,
         action_type = "UPDATE_CITY",
-        details = {"city_data": city_data},
+        details = {"city_data": city_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -79,7 +79,10 @@ def delete_city(
         user_id = user_id,
         user_email = user_email,
         action_type = "DELETE_CITY",
-        details = {"city": city},
+        details = {"city": {
+            "city_id": city.city_id,
+            "city_name": city.city_name
+        }},
         ip_address = request.client.host
     )
 

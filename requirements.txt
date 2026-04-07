@@ -10,3 +10,7 @@ python-multipart==0.0.20
 pydantic==2.12.5
 pydantic-settings==2.13.1
 email-validator==2.2.0
+scikit-learn==1.8.0
+numpy==2.4.4
+pandas==3.0.2
+joblib==1.5.3

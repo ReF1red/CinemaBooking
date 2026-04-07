@@ -9,6 +9,13 @@ class SessionService:
     def get_sessions_by_movie(db: Session, movie_id: int, date: str = None):
         query = db.query(models.Session).filter(models.Session.movie_id == movie_id)
         
+        movie = db.query(models.Movie).filter(models.Movie.movie_id == movie_id).first()
+
+        if not movie:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Movie not found"
+            )
         if date:
             date_start = datetime.strptime(date, "%Y-%m-%d")
             date_end = date_start.replace(hour = 23, minute = 59, second = 59)
@@ -24,8 +31,6 @@ class SessionService:
         for session in sessions:
 
             hall = db.query(models.Hall).filter(models.Hall.hall_id == session.hall_id).first()
-            movie = db.query(models.Movie).filter(models.Movie.movie_id == session.movie_id).first()
-
 
             result.append({
                 "session_id": session.session_id,
@@ -46,6 +51,14 @@ class SessionService:
     def get_session_by_cinema(db: Session, cinema_id: int, date: str = None):
         query = db.query(models.Session).join(models.Hall).filter(models.Hall.cinema_id == cinema_id)
 
+        cinema = db.query(models.Cinema).filter(models.Cinema.cinema_id == cinema_id).first()
+
+        if not cinema:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Cinema not found"
+            )
+        
         if date:
             date_start = datetime.strptime(date, "%Y-%m-%d")
             date_end = date_start.replace(hour = 23, minute = 59, second = 59)
@@ -66,7 +79,7 @@ class SessionService:
                 "movie_id": session.movie_id,
                 "start_time": session.start_time,
                 "price": session.price,
-                "available_seats": session.available_seats
+                "available_seats": session.available_seats,
             })
 
         return result
@@ -100,7 +113,7 @@ class SessionService:
 
         if not hall:
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="Hall not found"
             )
 
@@ -110,7 +123,7 @@ class SessionService:
 
         if not movie:
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="Movie not found"
             )           
         
@@ -140,8 +153,14 @@ class SessionService:
     
     @staticmethod
     def update_session(db: Session, session_id: int, session_data: schemas.SessionCreate):
-        session = SessionService.get_session_by_id(db, session_id)
-                
+        session = db.query(models.Session).filter(models.Session.session_id == session_id).first()
+
+        if not session:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Session not found"
+                )
+    
         session.hall_id = session_data.hall_id
         session.movie_id = session_data.movie_id
         session.start_time = session_data.start_time
@@ -161,7 +180,12 @@ class SessionService:
 
     @staticmethod
     def delete_session(db: Session, session_id: int):
-        session = SessionService.get_session_by_id(db, session_id)
+        session = db.query(models.Session).filter(models.Session.session_id == session_id).first()
+        if not session:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Session not found"
+                )
         
         booking = db.query(models.Booking).filter(models.Booking.session_id == session_id).first()
         if booking:

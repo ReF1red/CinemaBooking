@@ -6,6 +6,14 @@ from fastapi import HTTPException, status
 class HallService:
     @staticmethod
     def get_halls_by_cinema(db: Session,cinema_id: int):
+        cinema = db.query(models.Cinema).filter(models.Cinema.cinema_id == cinema_id).first()
+
+        if not cinema:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Cinema not found"
+            )
+
         halls = db.query(models.Hall).filter(models.Hall.cinema_id == cinema_id).all()
 
         result = []
@@ -25,7 +33,7 @@ class HallService:
     def get_hall_by_id(db: Session, hall_id: int):
         hall = db.query(models.Hall).filter(models.Hall.hall_id == hall_id).first()
 
-        if hall is None:
+        if not hall:
             raise HTTPException(
                 status_code = status.HTTP_404_NOT_FOUND,
                 detail = "Hall not found"
@@ -45,9 +53,10 @@ class HallService:
         cinema = db.query(models.Cinema).filter(
             models.Cinema.cinema_id == hall_data.cinema_id
         ).first()
+
         if not cinema:
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="Cinema not found"
             )
 
@@ -80,8 +89,14 @@ class HallService:
     
     @staticmethod
     def update_hall(db: Session, hall_id: int, hall_data: schemas.HallCreate):
-        hall = HallService.get_hall_by_id(db, hall_id)
+        hall = db.query(models.Hall).filter(models.Hall.hall_id == hall_id).first()
         
+        if not hall:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Hall not found"
+            )
+
         hall.hall_name = hall_data.hall_name
         
         db.commit()
@@ -98,7 +113,13 @@ class HallService:
 
     @staticmethod
     def delete_hall(db: Session, hall_id: int):
-        hall = HallService.get_hall_by_id(db, hall_id)
+        hall = db.query(models.Hall).filter(models.Hall.hall_id == hall_id).first()
+
+        if not hall:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Hall not found"
+            )
 
         sessions = db.query(models.Session).filter(models.Session.hall_id == hall_id).first()
         if sessions:
@@ -114,6 +135,13 @@ class HallService:
     
     @staticmethod
     def get_seats_by_hall(db: Session, hall_id: int, session_id: int = None):
+        hall = db.query(models.Hall).filter(models.Hall.hall_id == hall_id).first()
+        if not hall:
+            raise HTTPException(
+                status_code = status.HTTP_404_NOT_FOUND,
+                detail = "Hall not found"
+            )
+
         seats = db.query(models.Seat).filter(models.Seat.hall_id == hall_id).all()
 
         booked_seat_ids = set()

@@ -1,1 +1,0 @@
-from .models import User, ActionLog, City, Cinema, Hall, Movie, Session, Booking, Ticket, FraudLog

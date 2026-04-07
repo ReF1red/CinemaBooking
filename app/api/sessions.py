@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from app.models import models
 from app.schemas import schemas
 from app.database import get_db
 from app.services.session_service import SessionService
 from app.services.log_service import LogService
 from app.api.deps import get_current_user, get_current_admin
+from datetime import datetime
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
 
@@ -23,7 +25,7 @@ def get_sessions_by_cinema(
     db = Depends(get_db),
     date: Optional[str] = Query(None, description="Дата формата ГОД-МЕСЯЦ-ДЕНЬ")
     ):
-    return SessionService.get_sessions_by_cinema(db, cinema_id, date)
+    return SessionService.get_session_by_cinema(db, cinema_id, date)
 
 @router.get("/{session_id}", response_model=schemas.SessionOut)
 def get_session_by_id(
@@ -34,17 +36,20 @@ def get_session_by_id(
     ):
     session = SessionService.get_session_by_id(db, session_id)
 
-    user_id = current_user.user_id if current_user else None
-    user_email = current_user.email if current_user else None
+    session_for_log = session.copy()
+    if isinstance(session_for_log.get("start_time"), datetime):
+        session_for_log["start_time"] = session_for_log["start_time"].isoformat()
 
-    LogService.log_action(
-        db = db,
-        user_id = user_id,
-        user_email = user_email,
-        action_type = "VIEW_SESSION",
-        details = {"session": session},
-        ip_address = request.client.host
-    )
+    if current_user:
+        LogService.log_action(
+            db = db,
+            user_id = current_user.user_id,
+            user_email = current_user.email,
+            action_type = "VIEW_SESSION",
+            details = {"session": session_for_log},
+            ip_address = request.client.host
+        )
+
     return session
 
 @router.post("/admin/sessions", response_model=schemas.SessionOut)
@@ -64,7 +69,11 @@ def create_session(
         user_id = user_id,
         user_email = user_email,
         action_type = "CREATE_SESSION",
-        details = {"session": session},
+        details = {
+            "session_id": session["session_id"],
+            "hall_id": session["hall_id"],
+            "movie_id": session["movie_id"]
+        },
         ip_address = request.client.host
     )
     return session
@@ -87,7 +96,11 @@ def update_session(
         user_id = user_id,
         user_email = user_email,
         action_type = "UPDATE_SESSION",
-        details = {"session": session},
+        details = {
+            "session_id": session["session_id"],
+            "hall_id": session["hall_id"],
+            "movie_id": session["movie_id"]
+        },
         ip_address = request.client.host
     )
 
@@ -100,7 +113,7 @@ def delete_session(
     db = Depends(get_db),
     current_user = Depends(get_current_admin)
     ):
-    session = SessionService.get_session_by_id(db, session_id)
+    session = db.query(models.Session).filter(models.Session.session_id == session_id).first()
 
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
@@ -110,7 +123,12 @@ def delete_session(
         user_id = user_id,
         user_email = user_email,
         action_type = "DELETE_SESSION",
-        details = {"session": session},
+        details = {"session": {
+            "session_id": session.session_id,
+            "movie_id": session.movie_id,
+            "hall_id": session.hall_id,
+            "start_time": str(session.start_time)
+        }},
         ip_address = request.client.host
     )
 

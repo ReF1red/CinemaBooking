@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from app.api import auth, cities, movies, halls, sessions, bookings
+from app.api import auth, cities, movies, halls, sessions, bookings, cinemas
 
 app = FastAPI(title="Cinema Booking API")
 
 app.include_router(auth.router)
 app.include_router(cities.router)
+app.include_router(cinemas.router)
 app.include_router(movies.router)
 app.include_router(halls.router)
 app.include_router(sessions.router)

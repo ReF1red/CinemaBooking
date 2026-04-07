@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List
+from app.models import models
 from app.schemas import schemas
 from app.database import get_db
 from app.services.cinema_service import CinemaService
@@ -33,7 +34,7 @@ def create_cinema(
         user_id = user_id,
         user_email = user_email,
         action_type = "CREATE_CINEMA",
-        details = {"cinema_data": cinema_data},
+        details = {"cinema_data": cinema_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -57,7 +58,7 @@ def update_cinema(
         user_id = user_id,
         user_email = user_email,
         action_type = "UPDATE_CINEMA",
-        details = {"cinema_data": cinema_data},
+        details = {"cinema_data": cinema_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -70,7 +71,7 @@ def delete_cinema(
     db = Depends(get_db),
     current_user = Depends(get_current_admin)
     ):
-    cinema = CinemaService.get_cinema_by_id(db, cinema_id)
+    cinema = db.query(models.Cinema).filter(models.Cinema.cinema_id == cinema_id).first()
 
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
@@ -80,7 +81,11 @@ def delete_cinema(
         user_id = user_id,
         user_email = user_email,
         action_type = "DELETE_CINEMA",
-        details = {"cinema": cinema},
+        details = {"cinema": {
+            "cinema_id": cinema.cinema_id,
+            "cinema_name": cinema.cinema_name,
+            "city_id": cinema.city_id            
+        }},
         ip_address = request.client.host
     )
 

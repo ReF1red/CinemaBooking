@@ -28,14 +28,15 @@ def get_hall_by_id(
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
 
-    LogService.log_action(
-        db = db,
-        user_id = user_id,
-        user_email = user_email,
-        action_type = "VIEW_HALL",
-        details = {"hall": hall},
-        ip_address = request.client.host
-    )
+    if current_user:
+        LogService.log_action(
+            db = db,
+            user_id = user_id,
+            user_email = user_email,
+            action_type = "VIEW_HALL",
+            details = {"hall": hall},
+            ip_address = request.client.host
+        )
 
     return hall
 
@@ -52,14 +53,15 @@ def get_seats_by_hall(
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
 
-    LogService.log_action(
-        db = db,
-        user_id = user_id,
-        user_email = user_email,
-        action_type = "VIEW_HALL_SCHEMA",
-        details = {"hall_id": hall_id, "session_id": session_id, "seats_count": len(seats)},
-        ip_address = request.client.host
-    )
+    if current_user:
+        LogService.log_action(
+            db = db,
+            user_id = user_id,
+            user_email = user_email,
+            action_type = "VIEW_HALL_SCHEMA",
+            details = {"hall_id": hall_id, "session_id": session_id, "seats_count": len(seats)},
+            ip_address = request.client.host
+        )
 
     return seats
 
@@ -80,7 +82,7 @@ def create_hall(
         user_id = user_id,
         user_email = user_email,
         action_type = "CREATE_HALL",
-        details = {"hall_data": hall_data},
+        details = {"hall_data": hall_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -104,7 +106,7 @@ def update_hall(
         user_id = user_id,
         user_email = user_email,
         action_type = "UPDATE_HALL",
-        details = {"hall_data": hall_data},
+        details = {"hall_data": hall_data.model_dump()},
         ip_address = request.client.host
     )
 
@@ -127,7 +129,11 @@ def delete_hall(
         user_id = user_id,
         user_email = user_email,
         action_type = "DELETE_HALL",
-        details = {"hall": hall},
+        details = {"hall": {
+            "hall_id": hall.hall_id,
+            "hall_name": hall.hall_name,
+            "cinema_id": hall.cinema_id
+        }},
         ip_address = request.client.host
     )
 

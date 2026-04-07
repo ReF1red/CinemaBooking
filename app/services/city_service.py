@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models import models
 from app.schemas import schemas
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 class CityService:
     @staticmethod
@@ -13,7 +13,7 @@ class CityService:
         city = db.query(models.City).filter(models.City.city_id == city_id).first()
         if city is None:
             raise HTTPException(
-                status_code=404,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail="City not found"
             )
         return city
@@ -23,7 +23,7 @@ class CityService:
         exist_city = db.query(models.City).filter(models.City.city_name == city_data.city_name).first()
         if exist_city:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="City already exists"
             )
         
@@ -50,7 +50,7 @@ class CityService:
         cinemas = db.query(models.Cinema).filter(models.Cinema.city_id == city_id).all()
         if cinemas:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You can't delete a city with cinemas."
             )
         
