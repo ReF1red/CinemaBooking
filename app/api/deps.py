@@ -1,40 +1,27 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from jose import JWTError, jwt
+from app.core.auth_config import auth
 from app.database import get_db
 from app.models import models
 
-security_scheme = HTTPBearer(auto_error=False)
-
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    user_id: str = Depends(auth.access_token_required),
     db: Session = Depends(get_db)
 ):
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, "qwerty", algorithms=["HS256"])
-        email = payload.get("sub")
-        if email is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-        user = db.query(models.User).filter(models.User.email == email).first()
-        if user is None or not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-        return user
-    except JWTError:
+    user = db.query(models.User).filter(models.User.user_id == int(user_id)).first()
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"}
+            detail="User not found"
         )
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is blocked"
+        )
+    
+    return user
 
 def get_current_active_user(
     current_user = Depends(get_current_user)

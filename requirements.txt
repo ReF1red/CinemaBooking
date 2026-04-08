@@ -14,3 +14,5 @@ scikit-learn==1.8.0
 numpy==2.4.4
 pandas==3.0.2
 joblib==1.5.3
+bcrypt==4.2.1
+authx==1.5.2

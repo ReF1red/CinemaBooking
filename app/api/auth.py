@@ -4,7 +4,8 @@ from app.schemas import schemas
 from app.models import models
 from app.services.auth_service import AuthService
 from app.services.log_service import LogService
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from app.core.auth_config import auth
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 
 router =  APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -28,13 +29,15 @@ def register(
     return user
 
 
-@router.post("/login", response_model=schemas.Token)
+@router.post("/login", response_model=schemas.TokenOut)
 def login(
     form_data: schemas.UserLogin,
     request:Request,
+    response: Response,
     db: Session = Depends(get_db)
 ):
-    result = AuthService.login(db, form_data.email, form_data.password)
+    tokens = AuthService.login(db, form_data.email, form_data.password, request)
+
     user = db.query(models.User).filter(models.User.email == form_data.email).first()
 
     LogService.log_action(
@@ -46,4 +49,39 @@ def login(
         ip_address = request.client.host
     )
 
-    return result
+    return tokens
+
+@router.post("/refresh", response_model=schemas.RefreshTokenOut)
+def refresh(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):  
+    refresh_token = request.cookies.get("refresh_token")
+    
+    if not refresh_token:
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail = "Refresh token missing"
+        )
+    
+    tokens = AuthService.refresh_token(db, refresh_token)
+    auth.set_access_cookies(tokens["access_token"], response)
+    
+    return tokens
+
+@router.post("/logout")
+async def logout(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db)
+):
+    refresh_token = request.cookies.get("refresh_token")
+
+    if refresh_token:
+        AuthService.logout(db, refresh_token)
+    
+    auth.unset_access_cookies(response)
+    auth.unset_refresh_cookies(response)
+    
+    return {"message": "Logged out successfully"}

@@ -24,9 +24,17 @@ class UserOut(BaseModel):
     class Config:
         from_attributes = True
 
-class Token(BaseModel):
+class TokenOut(BaseModel):
     access_token: str
-    token_type: str = "bearer"    
+    refresh_token: str
+    token_type: str = "bearer"
+
+class RefreshTokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class RefreshTokenCreate(BaseModel):
+    refresh_token: str
 
 class CityBase(BaseModel):
     city_name: str

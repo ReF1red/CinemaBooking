@@ -21,8 +21,20 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     bookings = relationship("Booking", back_populates="user")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     action_logs = relationship("ActionLog", back_populates="user")
 
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    refresh_token_id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    token_hash = Column(String, unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    is_revoked = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User", back_populates="refresh_tokens")
 
 class ActionLog(Base):
     __tablename__ = "action_logs"
