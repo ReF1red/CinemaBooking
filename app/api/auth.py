@@ -32,11 +32,11 @@ def register(
 @router.post("/login", response_model=schemas.TokenOut)
 def login(
     form_data: schemas.UserLogin,
-    request:Request,
+    request: Request,
     response: Response,
     db: Session = Depends(get_db)
 ):
-    tokens = AuthService.login(db, form_data.email, form_data.password, request)
+    tokens = AuthService.login(db, form_data.email, form_data.password, response)
 
     user = db.query(models.User).filter(models.User.email == form_data.email).first()
 
@@ -50,6 +50,7 @@ def login(
     )
 
     return tokens
+
 
 @router.post("/refresh", response_model=schemas.RefreshTokenOut)
 def refresh(
@@ -65,10 +66,10 @@ def refresh(
             detail = "Refresh token missing"
         )
     
-    tokens = AuthService.refresh_token(db, refresh_token)
-    auth.set_access_cookies(tokens["access_token"], response)
+    tokens = AuthService.refresh_token(db, refresh_token, response, request)
     
     return tokens
+
 
 @router.post("/logout")
 async def logout(
@@ -77,11 +78,7 @@ async def logout(
     db: Session = Depends(get_db)
 ):
     refresh_token = request.cookies.get("refresh_token")
-
-    if refresh_token:
-        AuthService.logout(db, refresh_token)
     
-    auth.unset_access_cookies(response)
-    auth.unset_refresh_cookies(response)
+    AuthService.logout(db, response, refresh_token, request)
     
     return {"message": "Logged out successfully"}

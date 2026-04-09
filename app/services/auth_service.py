@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from app.schemas import schemas
 from app.core.auth_config import auth
-from fastapi import HTTPException, status, Request
+from fastapi import HTTPException, status, Request, Response
 from app.models import models
 from app.core.security import get_password_hash, verify_password
 from datetime import datetime, timedelta
@@ -34,7 +34,7 @@ class AuthService:
         return new_user
     
     @staticmethod
-    def login(db: Session, email: str, password: str, request: Request):
+    def login(db: Session, email: str, password: str, response: Response):
         user = db.query(models.User).filter(models.User.email == email).first()
 
         if not user or not verify_password(password, user.password_hash):
@@ -54,6 +54,9 @@ class AuthService:
         access_token = auth.create_access_token(uid=str(user.user_id))
         refresh_token = auth.create_refresh_token(uid=str(user.user_id))
 
+        auth.set_access_cookies(response=response, token=access_token)
+        auth.set_refresh_cookies(response=response, token=refresh_token)
+
         token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
 
         refresh_token_record = models.RefreshToken(
@@ -72,7 +75,13 @@ class AuthService:
         }
     
     @staticmethod
-    def refresh_token(db: Session, refresh_token: str):
+    def refresh_token(db: Session, refresh_token: str = None, response: Response = None, request: Request = None):
+        if not refresh_token and request:
+            refresh_token = request.cookies.get(auth.config.JWT_REFRESH_COOKIE_NAME)
+        
+        if not refresh_token:
+            raise HTTPException(status_code=401, detail="Refresh token not found")
+        
         try:
             payload = auth._decode_token(refresh_token, "refresh")
             user_id = int(payload.sub)
@@ -91,18 +100,27 @@ class AuthService:
 
         new_access_token = auth.create_access_token(uid=str(user_id))
 
+        if response:
+            auth.set_access_cookies(response=response, token=new_access_token)
+
         return {"access_token": new_access_token, "token_type": "bearer"}
 
     @staticmethod
-    def logout(db: Session, refresh_token: str):
-        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-        record = db.query(models.RefreshToken).filter(
-            models.RefreshToken.token_hash == token_hash
-        ).first()
+    def logout(db: Session, response: Response, refresh_token: str = None, request: Request = None):
+        if not refresh_token and request:
+            refresh_token = request.cookies.get(auth.config.JWT_REFRESH_COOKIE_NAME)
+        
+        if refresh_token:
+            token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+            record = db.query(models.RefreshToken).filter(
+                models.RefreshToken.token_hash == token_hash
+            ).first()
 
-        if record:
-            record.is_revoked = True
-            db.commit()
+            if record:
+                record.is_revoked = True
+                db.commit()
+
+        auth.unset_access_cookies(response)
+        auth.unset_refresh_cookies(response)
 
         return {"message": "Logged out successfully"}
-    
