@@ -8,3 +8,5 @@ __pycache__/
 *.db-journal
 
 .vscode/
+
+app/ai_models/

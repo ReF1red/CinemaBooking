@@ -6,7 +6,6 @@ from app.models import models
 from app.core.security import get_password_hash, verify_password
 from datetime import datetime, timedelta
 import hashlib
-import os
 
 class AuthService:
     @staticmethod
@@ -80,13 +79,19 @@ class AuthService:
             refresh_token = request.cookies.get(auth.config.JWT_REFRESH_COOKIE_NAME)
         
         if not refresh_token:
-            raise HTTPException(status_code=401, detail="Refresh token not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token not found"
+            )
         
         try:
             payload = auth._decode_token(refresh_token, "refresh")
             user_id = int(payload.sub)
         except Exception:
-            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
         
         token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
         record = db.query(models.RefreshToken).filter(
@@ -96,7 +101,10 @@ class AuthService:
         ).first()
 
         if not record:
-            raise HTTPException(status_code=401, detail="Refresh token not found or revoked")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token not found or revoked"
+            )
 
         new_access_token = auth.create_access_token(uid=str(user_id))
 

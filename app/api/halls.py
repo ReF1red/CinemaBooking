@@ -1,20 +1,22 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from app.schemas import schemas
 from app.database import get_db
 from app.services.hall_service import HallService
 from app.services.log_service import LogService
-from app.api.deps import get_current_user, get_current_admin
+from app.models import models
+from app.api.deps import get_current_user, get_current_cinema_admin
 
 router = APIRouter(prefix="/halls", tags=["Halls"])
 
 @router.get("/cinemas/{cinema_id}/halls", response_model=List[schemas.HallOut])
 def get_halls_by_cinema(
     cinema_id: int,
-    db = Depends(get_db)
+    db = Depends(get_db),
+    current_user = Depends(get_current_user)
     ):
-    return HallService.get_halls_by_cinema(db, cinema_id)
+    return HallService.get_halls_by_cinema(db, cinema_id, current_user)
 
 @router.get("/halls/{hall_id}", response_model=schemas.HallOut)
 def get_hall_by_id(
@@ -70,8 +72,15 @@ def create_hall(
     hall_data: schemas.HallCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
+    current_user = Depends(get_current_cinema_admin)
     ):
+    if current_user.role == models.UserRole.CINEMA_ADMIN:
+        if hall_data.cinema_id != current_user.cinema_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot create hall in another cinema"
+            )
+
     hall = HallService.create_hall(db, hall_data)
 
     user_id = current_user.user_id if current_user else None
@@ -94,9 +103,22 @@ def update_hall(
     hall_data: schemas.HallCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
+    current_user = Depends(get_current_cinema_admin)
     ):
-    hall = HallService.update_hall(db, hall_id, hall_data)
+    hall = db.query(models.Hall).filter(models.Hall.hall_id == hall_id).first()
+    if not hall:
+        raise HTTPException(
+            status_code=404,
+            detail="Hall not found"
+        )
+    if current_user.role == models.UserRole.CINEMA_ADMIN:
+        if hall.cinema_id != current_user.cinema_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied"
+            )
+
+    updated_hall = HallService.update_hall(db, hall_id, hall_data)
 
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
@@ -110,17 +132,28 @@ def update_hall(
         ip_address = request.client.host
     )
 
-    return hall
+    return updated_hall
 
 @router.delete("/admin/halls/{hall_id}")
 def delete_hall(
     hall_id: int,
     request: Request,
     db = Depends(get_db),
-    current_user = Depends(get_current_admin)
+    current_user = Depends(get_current_cinema_admin)
     ):
-    hall = HallService.get_hall_by_id(db, hall_id)
-    
+    hall = db.query(models.Hall).filter(models.Hall.hall_id == hall_id).first()
+    if not hall:
+        raise HTTPException(
+            status_code=404,
+            detail="Hall not found"
+        )
+    if current_user.role == models.UserRole.CINEMA_ADMIN:
+        if hall.cinema_id != current_user.cinema_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied"
+            )
+            
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
 

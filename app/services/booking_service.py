@@ -3,7 +3,6 @@ from app.models import models
 from app.schemas import schemas
 from fastapi import HTTPException, status 
 from datetime import datetime, timedelta
-from app.ai_models.fraud_model import fraud_model
 
 import numpy as np
 
@@ -101,14 +100,6 @@ class BookingService:
             'cancellation_rate': cancellation_rate,
             'seats_scattered': seats_scattered
         }
-
-        prediction = fraud_model.predict(features)
-
-        if prediction['is_fraudulent']:
-            raise HTTPException(
-                status_code = status.HTTP_403_FORBIDDEN,
-                detail = f"Подозрительная операция. Риск: {prediction['risk_score']:.2f}"
-            )
 
         new_booking = models.Booking(
             user_id = user_id,

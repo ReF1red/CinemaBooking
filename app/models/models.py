@@ -7,6 +7,7 @@ import enum
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
+    CINEMA_ADMIN = "cinema_admin"
     CLIENT = "client"
 
 class User(Base):
@@ -17,12 +18,14 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     full_name = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.CLIENT)
+    cinema_id = Column(Integer, ForeignKey("cinemas.cinema_id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     bookings = relationship("Booking", back_populates="user")
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     action_logs = relationship("ActionLog", back_populates="user")
+    cinema = relationship("Cinema", foreign_keys=[cinema_id])
 
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
@@ -102,6 +105,13 @@ class Movie(Base):
     genre = Column(String)
     poster_url = Column(String)
     release_year = Column(Integer)
+    rating = Column(Float, nullable=True)
+    director = Column(String, nullable=True)
+    writer = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    budget_amount = Column(Float, nullable=True)
+    budget_currency = Column(String, nullable=True)
+    main_actors = Column(Text, nullable=True)
 
     sessions = relationship("Session", back_populates="movie")
 

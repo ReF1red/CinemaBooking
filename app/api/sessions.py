@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.models import models
@@ -6,7 +6,7 @@ from app.schemas import schemas
 from app.database import get_db
 from app.services.session_service import SessionService
 from app.services.log_service import LogService
-from app.api.deps import get_current_user, get_current_admin
+from app.api.deps import get_current_user, get_current_cinema_admin
 from datetime import datetime
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
@@ -57,8 +57,23 @@ def create_session(
     session_data: schemas.SessionCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
+    current_user = Depends(get_current_cinema_admin)
     ):
+
+    hall = db.query(models.Hall).filter(models.Hall.hall_id == session_data.hall_id).first()
+    if not hall:
+        raise HTTPException(
+            status_code=404,
+            detail="Hall not found"
+        )
+    
+    if current_user.role == models.UserRole.CINEMA_ADMIN:
+        if hall.cinema_id != current_user.cinema_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied to this hall"
+            )
+        
     session = SessionService.create_session(db, session_data)
 
     user_id = current_user.user_id if current_user else None
@@ -84,9 +99,25 @@ def update_session(
     session_data: schemas.SessionCreate,
     request: Request,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_admin)
+    current_user = Depends(get_current_cinema_admin)
 ):
-    session = SessionService.update_session(db, session_id, session_data)
+    session = db.query(models.Session).filter(models.Session.session_id == session_id).first()
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+    
+    hall = db.query(models.Hall).filter(models.Hall.hall_id == session.hall_id).first()
+    
+    if current_user.role == models.UserRole.CINEMA_ADMIN:
+        if hall.cinema_id != current_user.cinema_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied to this session"
+            )
+        
+    updated_session = SessionService.update_session(db, session_id, session_data)
 
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
@@ -104,17 +135,31 @@ def update_session(
         ip_address = request.client.host
     )
 
-    return session
+    return updated_session
 
 @router.delete("/admin/sessions/{session_id}")
 def delete_session(
     session_id: int,
     request: Request,
     db = Depends(get_db),
-    current_user = Depends(get_current_admin)
+    current_user = Depends(get_current_cinema_admin)
     ):
     session = db.query(models.Session).filter(models.Session.session_id == session_id).first()
-
+    if not session:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+    
+    hall = db.query(models.Hall).filter(models.Hall.hall_id == session.hall_id).first()
+    
+    if current_user.role == models.UserRole.CINEMA_ADMIN:
+        if hall.cinema_id != current_user.cinema_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Access denied to this session"
+            )
+        
     user_id = current_user.user_id if current_user else None
     user_email = current_user.email if current_user else None
 

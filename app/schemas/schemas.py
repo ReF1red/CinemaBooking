@@ -18,6 +18,7 @@ class UserOut(BaseModel):
     email: EmailStr
     full_name: Optional[str] = None
     role: str
+    cinema_id: Optional[int] = None
     is_active: bool
     created_at: datetime
 
@@ -72,6 +73,13 @@ class MovieBase(BaseModel):
     genre: Optional[str] = None
     poster_url: Optional[str] = None
     release_year: Optional[int] = None
+    rating: Optional[float] = None
+    director: Optional[str] = None
+    writer: Optional[str] = None
+    country: Optional[str] = None
+    budget_amount: Optional[float] = None
+    budget_currency: Optional[str] = None
+    main_actors: Optional[List[str]] = None
 
 class MovieCreate(MovieBase):
     pass
