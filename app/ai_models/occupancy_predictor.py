@@ -1,12 +1,22 @@
-import pandas as pd
-import joblib
 from datetime import datetime
 
 class OccupancyPredictor:
     def __init__(self, model_path='app/ai_models/occupancy_model.joblib'):
-        self.model = joblib.load(model_path)
+        self.model_path = model_path
+        self._model = None
+    
+    def _load_model(self):
+        import joblib
+        self._model = joblib.load(self.model_path)
+    
+    @property
+    def model(self):
+        if self._model is None:
+            self._load_model()
+        return self._model
     
     def predict_single(self, session_data: dict) -> float:
+        import pandas as pd
         dt = datetime.strptime(session_data['date'], '%Y-%m-%d')
         
         features = pd.DataFrame([{
